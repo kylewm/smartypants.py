@@ -230,6 +230,8 @@ To Do list
 Version History
 ===============
 
+1.5_1.8: Fri, 10 Oct 2014 13:49:48 -0400
+	- Tags are ignored for closing apostrophes. All <em>Kyle</em>'s credit.
 1.5_1.7: Fri, 09 Aug 2013 07:34:16 -0400
 	- Add HBS language translation. Patch by by Vera Djuraskovic from
 	  Webhostinggeeks.com
@@ -794,18 +796,19 @@ def smartyPants(text, attr=default_smartypants_attr):
 
 					else:
 						# Normal case:
-						t = educateQuotes(t)
+						t = educateQuotes(t, prev_token_last_char)
 
 				if do_stupefy == "1":
 					t = stupefyEntities(t)
 
-			prev_token_last_char = last_char
+			if last_char:
+				prev_token_last_char = last_char
 			result.append(t)
 
 	return "".join(result)
 
 
-def educateQuotes(str):
+def educateQuotes(str, prevstrlast):
 	"""
 	Parameter:  String.
 	
@@ -855,6 +858,10 @@ def educateQuotes(str):
 			(?!\s | s\b | \d)
 			""" % (close_class,), re.VERBOSE)
 	str = closing_single_quotes_regex.sub(r"""\1&#8217;""", str)
+
+	# start a word, use a tag, apostrophe.
+	if re.match(r"\w", prevstrlast) and str[0] == "'":
+		str = "&#8217;""" + str[1:]
 
 	closing_single_quotes_regex = re.compile(r"""
 			(%s)
@@ -1132,6 +1139,10 @@ if __name__ == "__main__":
 				sp("""<p>He said &quot;Let's write some code.&quot; This code here <code>if True:\n\tprint &quot;Okay&quot;</code> is python code.</p>"""), 
 				   """<p>He said &#8220;Let&#8217;s write some code.&#8221; This code here <code>if True:\n\tprint &quot;Okay&quot;</code> is python code.</p>""")
 
+		def test_link_states(self):
+			self.assertEqual(sp("Kyle's 1test"), 'Kyle&#8217;s 1test')
+			self.assertEqual(sp("""<a href="">Kyle</a>'s 2test"""), '<a href="">Kyle</a>&#8217;s 2test')
+			self.assertEqual(sp("""<a><em>Kyle</em></a>'s 3test"""), '<a><em>Kyle</em></a>&#8217;s 3test')
 
 		def test_ordinal_numbers(self):
 			self.assertEqual(sp("21st century"), "21st century")  # no effect.
@@ -1146,6 +1157,6 @@ if __name__ == "__main__":
 
 
 __author__ = "Chad Miller <smartypantspy@chad.org>"
-__version__ = "1.5_1.7: Fri, 09 Aug 2013 07:34:16 -0400"
+__version__ = "1.5_1.8: Fri, 10 Oct 2014 13:14:33 -0400"
 __url__ = "http://wiki.chad.org/SmartyPantsPy"
 __description__ = "Smart-quotes, smart-ellipses, and smart-dashes for weblog entries in pyblosxom"
